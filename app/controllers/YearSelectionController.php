@@ -19,4 +19,15 @@ class YearSelectionController extends Controller
     ];
     $this->view('yearselection/index', $data);
   }
+
+  public function selectYear()
+  {
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+      $_POST = filter_input_array(INPUT_POST, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+      setSession('selectedYear', (int)$_POST['year']);
+      redirect('dashboard/index/');
+    } else {
+      redirect('yearselection/index');
+    }
+  }
 }

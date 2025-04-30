@@ -1,3 +1,9 @@
+<?php
+// if (isLoggedIn()) {
+//   redirect('dashboard/index');
+// }
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 

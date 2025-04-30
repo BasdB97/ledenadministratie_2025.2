@@ -26,9 +26,9 @@ class Core
       if (method_exists($this->currentController, $url[1])) {
         $this->currentMethod = $url[1];
         unset($url[1]);
-      } // else {
-      // $this->currentMethod = 'login';
-      // }
+      } else {
+        $this->currentMethod = 'index';
+      }
     }
 
     $this->params = $url ? array_values($url) : [];

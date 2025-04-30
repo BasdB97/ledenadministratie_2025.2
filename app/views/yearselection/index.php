@@ -1,3 +1,9 @@
+<?php
+// if (!isLoggedIn()) {
+//   redirect('auth/login');
+// }
+?>
+
 <!DOCTYPE html>
 <html lang="nl">
 
