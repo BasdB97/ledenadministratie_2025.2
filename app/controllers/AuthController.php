@@ -68,4 +68,11 @@ class AuthController extends Controller
 
     $this->view('auth/login', $data);
   }
+
+  public function logout()
+  {
+    session_unset();
+    session_destroy();
+    redirect('auth/login');
+  }
 }
