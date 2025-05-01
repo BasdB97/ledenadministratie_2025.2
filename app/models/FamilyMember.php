@@ -10,10 +10,14 @@ class FamilyMember
   }
 
   /**
-   * Haalt alle familieleden op die een contributie hebben in het opgegeven boekjaar
+   * Retrieves all family members who have a contribution in the specified book year
    * 
-   * @param int $bookyear_id Het ID van het boekjaar
-   * @return array Array met familieleden
+   * This method fetches family members along with their family information and calculates:
+   * - The total number of members in each family
+   * - The total outstanding contribution amount for each family
+   * 
+   * @param int $bookyear_id The ID of the book year to filter contributions by
+   * @return array An array of family member objects with additional family data
    */
   public function getMembersWithContributionsByBookyear($bookyear_id)
   {
