@@ -65,6 +65,14 @@ class Database
     return $this->stmt->fetchAll(PDO::FETCH_OBJ);
   }
 
+
+  public function resultSetAssoc()
+  {
+    $this->execute();
+    return $this->stmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+
+
   // Krijg 1 rij als object
   public function single()
   {
