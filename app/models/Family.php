@@ -21,6 +21,13 @@ class Family
     return $this->db->resultSet();
   }
 
+  public function getFamilyById($id)
+  {
+    $this->db->query("SELECT * FROM family WHERE id = :id");
+    $this->db->bind(':id', $id);
+    return $this->db->single();
+  }
+
   public function addressExists($data)
   {
     $this->db->query("
@@ -59,6 +66,59 @@ class Family
       return $this->db->execute();
     } catch (PDOException $e) {
       error_log('Database error in addFamily: ' . $e->getMessage());
+      return false;
+    }
+  }
+
+  public function updateFamily($data)
+  {
+    try {
+      $this->db->query("
+                UPDATE family
+                SET name = :name, street = :street, house_number = :house_number, postal_code = :postal_code, city = :city, country = :country
+                WHERE id = :id
+            ");
+      $this->db->bind(':id', $data['id']);
+      $this->db->bind(':name', $data['name']);
+      $this->db->bind(':street', $data['street']);
+      $this->db->bind(':house_number', $data['house_number']);
+      $this->db->bind(':postal_code', $data['postal_code']);
+      $this->db->bind(':city', $data['city']);
+      $this->db->bind(':country', $data['country']);
+
+      return $this->db->execute();
+    } catch (PDOException $e) {
+      error_log('Database error in updateFamily: ' . $e->getMessage());
+      return false;
+    }
+  }
+
+  public function deleteFamily($id)
+  {
+    try {
+      // Haal familieleden op
+      $this->db->query("SELECT id FROM family_members WHERE family_id = :family_id");
+      $this->db->bind(':family_id', $id);
+      $members = $this->db->resultSet();
+
+      // Verwijder contributies voor elk lid
+      foreach ($members as $member) {
+        $this->db->query("DELETE FROM contributions WHERE member_id = :member_id");
+        $this->db->bind(':member_id', $member->id);
+        $this->db->execute();
+      }
+
+      // Verwijder familieleden
+      $this->db->query("DELETE FROM family_members WHERE family_id = :family_id");
+      $this->db->bind(':family_id', $id);
+      $this->db->execute();
+
+      // Verwijder familie
+      $this->db->query("DELETE FROM family WHERE id = :id");
+      $this->db->bind(':id', $id);
+      return $this->db->execute();
+    } catch (PDOException $e) {
+      error_log('Database error in deleteFamily: ' . $e->getMessage());
       return false;
     }
   }
