@@ -23,9 +23,12 @@ class YearSelectionController extends Controller
   public function selectYear()
   {
     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+      $selectedYear = (int)$_POST['year'];
+      $bookyear = $this->bookyearModel->getBookyearByYear($selectedYear);
       $_POST = filter_input_array(INPUT_POST, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-      setSession('selectedYear', (int)$_POST['year']);
-      redirect('dashboard/index/');
+      setSession('selectedYear', $bookyear->year);
+      setSession('bookyear_id', $bookyear->id);
+      redirect('dashboard/index');
     } else {
       redirect('yearselection/index');
     }
