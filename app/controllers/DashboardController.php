@@ -21,10 +21,25 @@ class DashboardController extends Controller
     $bookyear = $this->bookyearModel->getBookyearByYear($selectedYear);
     $familyMembers = $this->familyMemberModel->getMembersWithContributionsByBookyear($bookyear->id);
 
+    // Maak een unieke lijst van families op basis van family_id
+    $families = [];
+    foreach ($familyMembers as $member) {
+      $familyId = $member->family_id;
+      if (!isset($families[$familyId])) {
+        $families[$familyId] = $member; // Sla het volledige member-object op
+      }
+    }
+
+    // Sorteer families op totale contributie (hoog naar laag)
+    $families = array_values($families); // Converteer naar geïndexeerde array
+    usort($families, function ($a, $b) {
+      return $b->total_contribution <=> $a->total_contribution;
+    });
+
     $data = [
       'bookyear' => $bookyear,
       'title' => 'Dashboard',
-      'familyMembers' => $familyMembers
+      'families' => $families
     ];
 
     $this->view('dashboard/index', $data);
