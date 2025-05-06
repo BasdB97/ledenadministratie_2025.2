@@ -14,7 +14,7 @@
 
   <?php flash('family_message'); ?>
 
-  <div class="bg-white rounded-lg shadow-md p-6">
+  <div class="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
     <form action="<?php echo URL_ROOT; ?>/family/editFamily/<?php echo $data['family']->id; ?>" method="POST" class="space-y-6">
       <?php if (!empty($data['address_err'])): ?>
         <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">

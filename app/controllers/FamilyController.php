@@ -3,10 +3,14 @@
 class FamilyController extends Controller
 {
   private $familyModel;
+  private $familyMemberModel;
+  private $bookyearModel;
 
   public function __construct()
   {
     $this->familyModel = $this->model('Family');
+    $this->familyMemberModel = $this->model('FamilyMember');
+    $this->bookyearModel = $this->model('Bookyear');
   }
 
   public function index()
@@ -158,6 +162,24 @@ class FamilyController extends Controller
     }
   }
 
+  public function familyDetails($id)
+  {
+    $bookyear = $this->bookyearModel->getBookyearByYear($_SESSION['selected_year']);
+
+    $data = [
+      'title' => 'Familie details',
+      'family' => $this->familyModel->getFamilyById($id),
+      'members' => $this->familyMemberModel->getMembersWithContributionsByBookyear($bookyear->id)
+    ];
+
+    $data['family']->total_contribution = 0;
+    foreach ($data['members'] as $member) {
+      $data['family']->total_contribution += $member->outstanding_contribution;
+    }
+
+    $this->view('family/familyDetails', $data);
+  }
+
   public function validateForm($data)
   {
     if (empty($data['name'])) {
@@ -196,6 +218,7 @@ class FamilyController extends Controller
 
     return $data;
   }
+
 
   public function checkErrors($data)
   {
