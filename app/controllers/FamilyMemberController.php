@@ -87,7 +87,7 @@ class FamilyMemberController extends Controller
           flash('family_member_message', 'Familielid succesvol toegevoegd.', 'alert-success');
           redirect('family/familyDetails/' . $familyId);
         } else {
-          flash('family_member_message', 'Er ging iets mis bij het toevoegen van het familielid en contributie.', 'alert-danger');
+          flash('family_member_message', 'Er ging iets mis bij het toevoegen van het familielid, probeer het opnieuw.', 'alert-danger');
           $this->view('family-member/addFamilyMember', $data);
         }
       } else {
@@ -117,7 +117,7 @@ class FamilyMemberController extends Controller
   {
     $member = $this->familyMemberModel->getFamilyMemberById($memberId);
     if (!$member) {
-      flash('family_member_message', 'Familielid niet gevonden.', 'alert-danger');
+      flash('family_member_message', 'Familielid niet gevonden, probeer het opnieuw.', 'alert-danger');
       redirect('family/index');
     }
 
@@ -191,7 +191,7 @@ class FamilyMemberController extends Controller
           flash('family_member_message', 'Familielid succesvol bijgewerkt.', 'alert-success');
           redirect('family/familyDetails/' . $data['family_id']);
         } else {
-          flash('family_member_message', 'Er ging iets mis bij het bijwerken van het familielid.', 'alert-danger');
+          flash('family_member_message', 'Er ging iets mis bij het bijwerken van het familielid, probeer het opnieuw.', 'alert-danger');
           $this->view('family-member/editFamilyMember', $data);
         }
       } else {

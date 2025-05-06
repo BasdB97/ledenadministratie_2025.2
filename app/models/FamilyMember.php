@@ -80,6 +80,16 @@ class FamilyMember
       $this->db->bind(':bookyear_id', $data['bookyear_id'], PDO::PARAM_INT);
       $this->db->execute();
 
+      // Update boekjaar totaalbedrag
+      $this->db->query("
+                UPDATE bookyear 
+                SET total_amount = COALESCE(total_amount, 0) + :amount 
+                WHERE id = :bookyear_id
+            ");
+      $this->db->bind(':amount', $data['contribution_amount']);
+      $this->db->bind(':bookyear_id', $data['bookyear_id'], PDO::PARAM_INT);
+      $this->db->execute();
+
       // Commit transactie
       $this->db->commit();
       return true;
@@ -104,6 +114,7 @@ class FamilyMember
       SELECT fm.*, f.name as last_name, f.street, f.house_number, f.postal_code, f.city, f.country 
       FROM family_members fm
       JOIN family f ON fm.family_id = f.id
+      JOIN contributions c ON fm.id = c.member_id
       WHERE fm.id = :id
     ");
     $this->db->bind(':id', $memberId);
@@ -114,6 +125,17 @@ class FamilyMember
   {
     try {
       $this->db->beginTransaction();
+
+      // Haal oude contributiebedrag op
+      $this->db->query("
+                SELECT amount 
+                FROM contributions 
+                WHERE member_id = :member_id AND bookyear_id = :bookyear_id
+            ");
+      $this->db->bind(':member_id', $data['id']);
+      $this->db->bind(':bookyear_id', $data['bookyear_id'], PDO::PARAM_INT);
+      $oldContribution = $this->db->single();
+      $oldAmount = $oldContribution ? $oldContribution->amount : 0;
 
       // Update familielid
       $this->db->query("
@@ -145,6 +167,20 @@ class FamilyMember
       $this->db->bind(':bookyear_id', $data['bookyear_id'], PDO::PARAM_INT);
       $this->db->execute();
 
+      // Update boekjaar totaalbedrag (verschil)
+      $amountDifference = $data['contribution_amount'] - $oldAmount;
+      if ($amountDifference != 0) {
+        $this->db->query("
+                    UPDATE bookyear 
+                    SET total_amount = COALESCE(total_amount, 0) + :amount 
+                    WHERE id = :bookyear_id
+                ");
+        $this->db->bind(':amount', $amountDifference);
+        $this->db->bind(':bookyear_id', $data['bookyear_id'], PDO::PARAM_INT);
+        $this->db->execute();
+      }
+
+      // Commit transactie
       $this->db->commit();
       return true;
     } catch (PDOException $e) {
@@ -157,8 +193,18 @@ class FamilyMember
   public function deleteFamilyMember($memberId)
   {
     try {
-      // Start transactie
       $this->db->beginTransaction();
+
+      // Haal contributiebedrag op voor het actieve boekjaar
+      $this->db->query("
+                SELECT c.amount, c.bookyear_id 
+                FROM contributions c 
+                WHERE c.member_id = :member_id
+            ");
+      $this->db->bind(':member_id', $memberId);
+      $contribution = $this->db->single();
+      $amount = $contribution ? $contribution->amount : 0;
+      $bookyearId = $contribution ? $contribution->bookyear_id : null;
 
       // Verwijder betalingen
       $this->db->query("DELETE FROM payment WHERE member_id = :member_id");
@@ -170,17 +216,28 @@ class FamilyMember
       $this->db->bind(':member_id', $memberId);
       $this->db->execute();
 
+      // Update boekjaar totaalbedrag
+      if ($amount > 0 && $bookyearId) {
+        $this->db->query("
+                    UPDATE bookyear 
+                    SET total_amount = COALESCE(total_amount, 0) - :amount 
+                    WHERE id = :bookyear_id
+                ");
+        $this->db->bind(':amount', $amount);
+        $this->db->bind(':bookyear_id', $bookyearId, PDO::PARAM_INT);
+        $this->db->execute();
+      }
+
       // Verwijder familielid
       $this->db->query("DELETE FROM family_members WHERE id = :id");
       $this->db->bind(':id', $memberId);
       $this->db->execute();
 
-      // Commit transactie
       $this->db->commit();
       return true;
     } catch (PDOException $e) {
       $this->db->rollBack();
-      error_log('Database error in deleteFamilyMember: ' . $e->getMessage());
+      error_log('Database error in deleteFamilyMember: ' . $e->getMessage() . ' | MemberId: ' . $memberId);
       return false;
     }
   }
