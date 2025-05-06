@@ -30,7 +30,8 @@ class FamilyMember
                f.city,
                f.country,
                mt.description AS member_type,
-               (SELECT amount FROM contributions WHERE member_id = fm.id AND bookyear_id = :bookyear_id) AS outstanding_contribution,
+               mt.discount_percentage,
+               (100 * (1 - mt.discount_percentage / 100)) AS outstanding_contribution,
                (SELECT COUNT(*) FROM family_members fm2 WHERE fm2.family_id = fm.family_id) AS member_count,
                (SELECT SUM(c2.amount) 
                 FROM contributions c2
@@ -45,5 +46,142 @@ class FamilyMember
     ");
     $this->db->bind(':bookyear_id', $bookyear_id);
     return $this->db->resultSet();
+  }
+
+  public function addFamilyMemberWithContribution($data)
+  {
+    try {
+      // Start transactie
+      $this->db->beginTransaction();
+
+      // Voeg familielid toe
+      $this->db->query("
+            INSERT INTO family_members (first_name, date_of_birth, member_type_id, family_id)
+            VALUES (:first_name, :date_of_birth, :member_type_id, :family_id)
+        ");
+      $this->db->bind(':first_name', $data['first_name']);
+      $this->db->bind(':date_of_birth', $data['date_of_birth']);
+      $this->db->bind(':member_type_id', $data['member_type_id']);
+      $this->db->bind(':family_id', $data['family_id']);
+      $this->db->execute();
+
+      // Haal het nieuwe lid-ID op
+      $memberId = $this->db->lastInsertId();
+
+      // Voeg contributie toe
+      $this->db->query("
+            INSERT INTO contributions (member_id, age, amount, member_type, bookyear_id)
+            VALUES (:member_id, :age, :amount, :member_type, :bookyear_id)
+        ");
+      $this->db->bind(':member_id', $memberId);
+      $this->db->bind(':age', $data['age']);
+      $this->db->bind(':amount', $data['contribution_amount']);
+      $this->db->bind(':member_type', $data['member_type_id']);
+      $this->db->bind(':bookyear_id', $data['bookyear_id'], PDO::PARAM_INT);
+      $this->db->execute();
+
+      // Commit transactie
+      $this->db->commit();
+      return true;
+    } catch (PDOException $e) {
+      $this->db->rollBack();
+      error_log('Database error in addFamilyMemberWithContribution: ' . $e->getMessage());
+      return false;
+    }
+  }
+
+  public function getDiscountPercentage($memberTypeId)
+  {
+    $this->db->query("SELECT discount_percentage FROM member_type WHERE id = :member_type_id");
+    $this->db->bind(':member_type_id', $memberTypeId);
+    $result = $this->db->single();
+    return $result ? $result->discount_percentage : 0;
+  }
+
+  public function getFamilyMemberById($memberId)
+  {
+    $this->db->query("
+      SELECT fm.*, f.name as last_name, f.street, f.house_number, f.postal_code, f.city, f.country 
+      FROM family_members fm
+      JOIN family f ON fm.family_id = f.id
+      WHERE fm.id = :id
+    ");
+    $this->db->bind(':id', $memberId);
+    return $this->db->single();
+  }
+
+  public function updateFamilyMember($data)
+  {
+    try {
+      $this->db->beginTransaction();
+
+      // Update familielid
+      $this->db->query("
+                UPDATE family_members 
+                SET first_name = :first_name, 
+                    date_of_birth = :date_of_birth, 
+                    member_type_id = :member_type_id 
+                WHERE id = :id
+            ");
+      $this->db->bind(':first_name', $data['first_name']);
+      $this->db->bind(':date_of_birth', $data['date_of_birth']);
+      $this->db->bind(':member_type_id', $data['member_type_id']);
+      $this->db->bind(':id', $data['id']);
+      $this->db->execute();
+
+      // Update contributie
+      $this->db->query("
+                UPDATE contributions 
+                SET age = :age, 
+                    amount = :amount, 
+                    member_type = :member_type 
+                WHERE member_id = :member_id 
+                AND bookyear_id = :bookyear_id
+            ");
+      $this->db->bind(':age', $data['age']);
+      $this->db->bind(':amount', $data['contribution_amount']);
+      $this->db->bind(':member_type', $data['member_type_id']);
+      $this->db->bind(':member_id', $data['id']);
+      $this->db->bind(':bookyear_id', $data['bookyear_id'], PDO::PARAM_INT);
+      $this->db->execute();
+
+      $this->db->commit();
+      return true;
+    } catch (PDOException $e) {
+      $this->db->rollBack();
+      error_log('Database error in updateFamilyMember: ' . $e->getMessage());
+      return false;
+    }
+  }
+
+  public function deleteFamilyMember($memberId)
+  {
+    try {
+      // Start transactie
+      $this->db->beginTransaction();
+
+      // Verwijder betalingen
+      $this->db->query("DELETE FROM payment WHERE member_id = :member_id");
+      $this->db->bind(':member_id', $memberId);
+      $this->db->execute();
+
+      // Verwijder contributies
+      $this->db->query("DELETE FROM contributions WHERE member_id = :member_id");
+      $this->db->bind(':member_id', $memberId);
+      $this->db->execute();
+
+      // Verwijder familielid
+      $this->db->query("DELETE FROM family_members WHERE id = :id");
+      $this->db->bind(':id', $memberId);
+      $this->db->execute();
+
+      // Commit transactie
+      $this->db->commit();
+      return true;
+    } catch (PDOException $e) {
+      $this->db->rollBack();
+      error_log('Database error in deleteFamilyMember: ' . $e->getMessage());
+      return false;
+    }
   }
 }

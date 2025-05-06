@@ -9,6 +9,7 @@ require_once '../app/libraries/Database.php';
 // Load helpers
 require_once '../app/helpers/url_helper.php';
 require_once '../app/helpers/session_helper.php';
+require_once '../app/helpers/validation.php';
 
 // Autoload Core Classes
 spl_autoload_register(function ($className) {
