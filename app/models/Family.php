@@ -57,6 +57,29 @@ class Family
     return $result->count > 0;
   }
 
+  public function addressExistsForOtherFamily($data, $currentFamilyId)
+  {
+    $this->db->query("
+        SELECT COUNT(*) as count
+        FROM family
+        WHERE LOWER(street) = LOWER(:street)
+          AND LOWER(house_number) = LOWER(:house_number)
+          AND LOWER(postal_code) = LOWER(:postal_code)
+          AND LOWER(city) = LOWER(:city)
+          AND LOWER(country) = LOWER(:country)
+          AND id != :exclude_id
+    ");
+    $this->db->bind(':street', $data['street']);
+    $this->db->bind(':house_number', $data['house_number']);
+    $this->db->bind(':postal_code', $data['postal_code']);
+    $this->db->bind(':city', $data['city']);
+    $this->db->bind(':country', $data['country']);
+    $this->db->bind(':exclude_id', $currentFamilyId);
+
+    $result = $this->db->single();
+    return $result->count > 0;
+  }
+
   public function addFamily($data)
   {
     try {

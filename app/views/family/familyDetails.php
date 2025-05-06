@@ -2,6 +2,8 @@
 <?php
 // echo '<pre>';
 // var_dump($data);
+// echo '<br>';
+// var_dump($_SESSION);
 // echo '</pre>';
 ?>
 <div class="container mx-auto px-4 py-6">
@@ -24,11 +26,13 @@
 
   <div class="flex justify-between items-center mb-4">
     <h3 class="text-2xl font-semibold">Familieleden</h3>
-    <button class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-md flex items-center">
+    <a href="<?php echo URL_ROOT; ?>/familyMember/addFamilyMember/<?php echo $data['family']->id; ?>" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-md flex items-center">
       <i class="fas fa-plus mr-2"></i>
       Lid Toevoegen
-    </button>
+    </a>
   </div>
+
+  <?php flash('family_member_message'); ?>
 
   <div class="bg-white rounded-lg shadow-md overflow-hidden">
     <div class="overflow-x-auto">
@@ -36,8 +40,10 @@
         <thead class="bg-gray-50">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Naam</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Geboortedatum</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leeftijd</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type Lid</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Korting</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Openstaande Contributie</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Betaling</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acties</th>
@@ -47,8 +53,10 @@
           <?php foreach ($data['members'] as $member) : ?>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap"><?php echo $member->first_name; ?></td>
+              <td class="px-6 py-4 whitespace-nowrap"><?php echo date('d-m-Y', strtotime($member->date_of_birth)); ?></td>
               <td class="px-6 py-4 whitespace-nowrap"><?php echo calculateAge($member->date_of_birth); ?></td>
               <td class="px-6 py-4 whitespace-nowrap"><?php echo $member->member_type; ?></td>
+              <td class="px-6 py-4 whitespace-nowrap"><?php echo number_format($member->discount_percentage, 0); ?>%</td>
               <td class="px-6 py-4 whitespace-nowrap">€ <?php echo number_format($member->outstanding_contribution, 2, ',', '.'); ?></td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo ($member->outstanding_contribution > 0) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'; ?>">
@@ -56,12 +64,12 @@
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap space-x-2">
-                <button class="bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded-md text-sm">
+                <a href="<?php echo URL_ROOT; ?>/familyMember/editFamilyMember/<?php echo $member->id; ?>" class="bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded-md text-sm">
                   Bewerken
-                </button>
-                <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm">
+                </a>
+                <a href="<?php echo URL_ROOT; ?>/familyMember/deleteFamilyMember/<?php echo $member->id; ?>" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm" onclick="return confirm('Weet u zeker dat u dit familielid wilt verwijderen? Hiermee verwijdert u ook alle contributies');">
                   Verwijderen
-                </button>
+                </a>
               </td>
             </tr>
           <?php endforeach; ?>
