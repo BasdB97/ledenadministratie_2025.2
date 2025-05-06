@@ -3,10 +3,14 @@
 class FamilyController extends Controller
 {
   private $familyModel;
+  private $familyMemberModel;
+  private $bookyearModel;
 
   public function __construct()
   {
     $this->familyModel = $this->model('Family');
+    $this->familyMemberModel = $this->model('FamilyMember');
+    $this->bookyearModel = $this->model('Bookyear');
   }
 
   public function index()
@@ -38,16 +42,15 @@ class FamilyController extends Controller
         'address_err' => ''
       ];
 
-      $data = $this->validateForm($data);
-      if (
-        empty($data['name_err']) && empty($data['street_err']) && empty($data['house_number_err']) &&
-        empty($data['postal_code_err']) && empty($data['city_err']) && empty($data['country_err']) &&
-        $this->familyModel->addressExists($data)
-      ) {
+      // Valideer formulier
+      $data = validateForm($data);
+
+      // Controleer adresuniekheid
+      if (!checkErrors($data) && $this->familyModel->addressExists($data)) {
         $data['address_err'] = 'Er woont al een familie op dit adres.';
       }
 
-      if ($this->checkErrors($data)) {
+      if (!checkErrors($data)) {
         if ($this->familyModel->addFamily($data)) {
           flash('family_message', 'Familie succesvol toegevoegd.', 'alert-success');
           redirect('family/index');
@@ -106,9 +109,15 @@ class FamilyController extends Controller
         'address_err' => ''
       ];
 
-      $data = $this->validateForm($data);
+      // Valideer formulier
+      $data = validateForm($data);
 
-      if ($this->checkErrors($data)) {
+      // Controleer adresuniekheid (exclusief huidige familie)
+      if (!checkErrors($data) && $this->familyModel->addressExistsForOtherFamily($data, $id)) {
+        $data['address_err'] = 'Er woont al een andere familie op dit adres.';
+      }
+
+      if (!checkErrors($data)) {
         if ($this->familyModel->updateFamily($data)) {
           flash('family_message', 'Familie succesvol bijgewerkt.', 'alert-success');
           redirect('family/index');
@@ -158,54 +167,21 @@ class FamilyController extends Controller
     }
   }
 
-  public function validateForm($data)
+  public function familyDetails($id)
   {
-    if (empty($data['name'])) {
-      $data['name_err'] = 'Vul een naam in.';
-    } elseif (preg_match('/[0-9]/', $data['name'])) {
-      $data['name_err'] = 'De familienaam mag geen cijfers bevatten.';
+    $bookyear = $this->bookyearModel->getBookyearByYear($_SESSION['selectedYear']);
+
+    $data = [
+      'title' => 'Familie details',
+      'family' => $this->familyModel->getFamilyById($id),
+      'members' => $this->familyMemberModel->getMembersWithContributionsByBookyear($bookyear->id)
+    ];
+
+    $data['family']->total_contribution = 0;
+    foreach ($data['members'] as $member) {
+      $data['family']->total_contribution += $member->outstanding_contribution;
     }
 
-    if (empty($data['street'])) {
-      $data['street_err'] = 'Vul een straatnaam in.';
-    } elseif (preg_match('/[0-9]/', $data['street'])) {
-      $data['street_err'] = 'De straatnaam mag geen cijfers bevatten.';
-    }
-
-    if (empty($data['house_number'])) {
-      $data['house_number_err'] = 'Vul een huisnummer in.';
-    } elseif (!preg_match('/^[0-9]+$/', $data['house_number'])) {
-      $data['house_number_err'] = 'Het huisnummer mag alleen cijfers bevatten.';
-    }
-
-    if (empty($data['postal_code'])) {
-      $data['postal_code_err'] = 'Vul een postcode in.';
-    } elseif (!preg_match('/^[0-9]{4}[A-Z]{2}$/', $data['postal_code'])) {
-      $data['postal_code_err'] = 'Vul een geldige postcode in (bijv. 1234AB).';
-    }
-
-    if (empty($data['city'])) {
-      $data['city_err'] = 'Vul een plaats in.';
-    } elseif (preg_match('/[0-9]/', $data['city'])) {
-      $data['city_err'] = 'De plaatsnaam mag geen cijfers bevatten.';
-    }
-
-    if (empty($data['country'])) {
-      $data['country_err'] = 'Vul het land in.';
-    }
-
-    return $data;
-  }
-
-  public function checkErrors($data)
-  {
-    if (
-      empty($data['name_err']) && empty($data['street_err']) && empty($data['house_number_err']) &&
-      empty($data['postal_code_err']) && empty($data['city_err']) && empty($data['country_err']) &&
-      empty($data['address_err'])
-    ) {
-      return true;
-    }
-    return false;
+    $this->view('family/familyDetails', $data);
   }
 }
