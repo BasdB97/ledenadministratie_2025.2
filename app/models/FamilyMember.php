@@ -29,6 +29,8 @@ class FamilyMember
                f.postal_code,
                f.city,
                f.country,
+               mt.description AS member_type,
+               (SELECT amount FROM contributions WHERE member_id = fm.id AND bookyear_id = :bookyear_id) AS outstanding_contribution,
                (SELECT COUNT(*) FROM family_members fm2 WHERE fm2.family_id = fm.family_id) AS member_count,
                (SELECT SUM(c2.amount) 
                 FROM contributions c2
@@ -38,6 +40,7 @@ class FamilyMember
         FROM family_members fm
         INNER JOIN contributions c ON fm.id = c.member_id
         INNER JOIN family f ON fm.family_id = f.id
+        INNER JOIN member_type mt ON fm.member_type_id = mt.id
         WHERE c.bookyear_id = :bookyear_id
     ");
     $this->db->bind(':bookyear_id', $bookyear_id);

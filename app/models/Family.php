@@ -21,11 +21,19 @@ class Family
     return $this->db->resultSet();
   }
 
+
   public function getFamilyById($id)
   {
     $this->db->query("SELECT * FROM family WHERE id = :id");
     $this->db->bind(':id', $id);
     return $this->db->single();
+  }
+
+  public function getFamilyMembers($id)
+  {
+    $this->db->query("SELECT * FROM family_members WHERE family_id = :id");
+    $this->db->bind(':id', $id);
+    return $this->db->resultSet();
   }
 
   public function addressExists($data)
