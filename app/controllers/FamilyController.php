@@ -153,12 +153,13 @@ class FamilyController extends Controller
   public function deleteFamily($id)
   {
     $family = $this->familyModel->getFamilyById($id);
+    $bookyear = $this->bookyearModel->getBookyearByYear($_SESSION['selectedYear']);
     if (!$family) {
       flash('family_message', 'Familie niet gevonden.', 'alert-danger');
       redirect('family/index');
     }
 
-    if ($this->familyModel->deleteFamily($id)) {
+    if ($this->familyModel->deleteFamily($id, $bookyear->id)) {
       flash('family_message', 'Familie en bijbehorende gegevens succesvol verwijderd.', 'alert-success');
       redirect('family/index');
     } else {

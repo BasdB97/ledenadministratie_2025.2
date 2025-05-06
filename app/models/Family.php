@@ -124,33 +124,83 @@ class Family
     }
   }
 
-  public function deleteFamily($id)
+  public function deleteFamily($familyId, $bookyear_id)
   {
     try {
-      // Haal familieleden op
-      $this->db->query("SELECT id FROM family_members WHERE family_id = :family_id");
-      $this->db->bind(':family_id', $id);
-      $members = $this->db->resultSet();
+      $this->db->beginTransaction();
 
-      // Verwijder contributies voor elk lid
-      foreach ($members as $member) {
-        $this->db->query("DELETE FROM contributions WHERE member_id = :member_id");
-        $this->db->bind(':member_id', $member->id);
+      // Haal alle member_ids op voor de familie
+      $this->db->query("
+                SELECT id 
+                FROM family_members 
+                WHERE family_id = :family_id
+            ");
+      $this->db->bind(':family_id', $familyId);
+      $members = $this->db->resultSet();
+      $memberIds = array_column($members, 'id');
+
+      if (!empty($memberIds)) {
+        // Verwijder betalingen
+        $this->db->query("
+                    DELETE FROM payment 
+                    WHERE member_id IN (" . implode(',', array_fill(0, count($memberIds), '?')) . ")
+                ");
+        foreach ($memberIds as $index => $memberId) {
+          $this->db->bind($index + 1, $memberId);
+        }
+        $this->db->execute();
+
+        // Verwijder contributies
+        $this->db->query("
+                    DELETE FROM contributions 
+                    WHERE member_id IN (" . implode(',', array_fill(0, count($memberIds), '?')) . ")
+                ");
+        foreach ($memberIds as $index => $memberId) {
+          $this->db->bind($index + 1, $memberId);
+        }
+        $this->db->execute();
+
+        // Verwijder familieleden
+        $this->db->query("
+                    DELETE FROM family_members 
+                    WHERE family_id = :family_id
+                ");
+        $this->db->bind(':family_id', $familyId);
         $this->db->execute();
       }
 
-      // Verwijder familieleden
-      $this->db->query("DELETE FROM family_members WHERE family_id = :family_id");
-      $this->db->bind(':family_id', $id);
-      $this->db->execute();
+      // Update bookyear total_amount
+      $this->updateBookyearTotalAmount($bookyear_id);
 
       // Verwijder familie
-      $this->db->query("DELETE FROM family WHERE id = :id");
-      $this->db->bind(':id', $id);
-      return $this->db->execute();
+      $this->db->query("
+                DELETE FROM family 
+                WHERE id = :family_id
+            ");
+      $this->db->bind(':family_id', $familyId);
+      $this->db->execute();
+
+      $this->db->commit();
+      return true;
     } catch (PDOException $e) {
-      error_log('Database error in deleteFamily: ' . $e->getMessage());
+      $this->db->rollBack();
+      error_log('Database error in deleteFamily: ' . $e->getMessage() . ' | FamilyId: ' . $familyId);
       return false;
     }
+  }
+
+  public function updateBookyearTotalAmount($bookyear_id)
+  {
+    $this->db->query("
+            UPDATE bookyear 
+            SET total_amount = COALESCE((
+                SELECT SUM(amount) 
+                FROM contributions 
+                WHERE bookyear_id = :bookyear_id
+            ), 0)
+            WHERE id = :bookyear_id
+        ");
+    $this->db->bind(':bookyear_id', $bookyear_id, PDO::PARAM_INT);
+    $this->db->execute();
   }
 }

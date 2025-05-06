@@ -58,7 +58,7 @@ class FamilyMember
 
     return $this->db->resultSet();
   }
-  
+
   public function addFamilyMemberWithContribution($data)
   {
     try {
@@ -92,14 +92,7 @@ class FamilyMember
       $this->db->execute();
 
       // Update boekjaar totaalbedrag
-      $this->db->query("
-                UPDATE bookyear 
-                SET total_amount = COALESCE(total_amount, 0) + :amount 
-                WHERE id = :bookyear_id
-            ");
-      $this->db->bind(':amount', $data['contribution_amount']);
-      $this->db->bind(':bookyear_id', $data['bookyear_id'], PDO::PARAM_INT);
-      $this->db->execute();
+      $this->updateBookyearTotalAmount($data['bookyear_id']);
 
       // Commit transactie
       $this->db->commit();
@@ -109,14 +102,6 @@ class FamilyMember
       error_log('Database error in addFamilyMemberWithContribution: ' . $e->getMessage());
       return false;
     }
-  }
-
-  public function getDiscountPercentage($memberTypeId)
-  {
-    $this->db->query("SELECT discount_percentage FROM member_type WHERE id = :member_type_id");
-    $this->db->bind(':member_type_id', $memberTypeId);
-    $result = $this->db->single();
-    return $result ? $result->discount_percentage : 0;
   }
 
   public function getFamilyMemberById($memberId)
@@ -179,17 +164,7 @@ class FamilyMember
       $this->db->execute();
 
       // Update boekjaar totaalbedrag (verschil)
-      $amountDifference = $data['contribution_amount'] - $oldAmount;
-      if ($amountDifference != 0) {
-        $this->db->query("
-                    UPDATE bookyear 
-                    SET total_amount = COALESCE(total_amount, 0) + :amount 
-                    WHERE id = :bookyear_id
-                ");
-        $this->db->bind(':amount', $amountDifference);
-        $this->db->bind(':bookyear_id', $data['bookyear_id'], PDO::PARAM_INT);
-        $this->db->execute();
-      }
+      $this->updateBookyearTotalAmount($data['bookyear_id']);
 
       // Commit transactie
       $this->db->commit();
@@ -227,22 +202,15 @@ class FamilyMember
       $this->db->bind(':member_id', $memberId);
       $this->db->execute();
 
-      // Update boekjaar totaalbedrag
-      if ($amount > 0 && $bookyearId) {
-        $this->db->query("
-                    UPDATE bookyear 
-                    SET total_amount = COALESCE(total_amount, 0) - :amount 
-                    WHERE id = :bookyear_id
-                ");
-        $this->db->bind(':amount', $amount);
-        $this->db->bind(':bookyear_id', $bookyearId, PDO::PARAM_INT);
-        $this->db->execute();
-      }
-
       // Verwijder familielid
       $this->db->query("DELETE FROM family_members WHERE id = :id");
       $this->db->bind(':id', $memberId);
       $this->db->execute();
+
+      // Update bookyear total_amount
+      if ($bookyearId) {
+        $this->updateBookyearTotalAmount($bookyearId);
+      }
 
       $this->db->commit();
       return true;
@@ -251,5 +219,28 @@ class FamilyMember
       error_log('Database error in deleteFamilyMember: ' . $e->getMessage() . ' | MemberId: ' . $memberId);
       return false;
     }
+  }
+
+  public function getDiscountPercentage($memberTypeId)
+  {
+    $this->db->query("SELECT discount_percentage FROM member_type WHERE id = :member_type_id");
+    $this->db->bind(':member_type_id', $memberTypeId);
+    $result = $this->db->single();
+    return $result ? $result->discount_percentage : 0;
+  }
+
+  public function updateBookyearTotalAmount($bookyear_id)
+  {
+    $this->db->query("
+            UPDATE bookyear 
+            SET total_amount = COALESCE((
+                SELECT SUM(amount) 
+                FROM contributions 
+                WHERE bookyear_id = :bookyear_id
+            ), 0)
+            WHERE id = :bookyear_id
+        ");
+    $this->db->bind(':bookyear_id', $bookyear_id, PDO::PARAM_INT);
+    $this->db->execute();
   }
 }
