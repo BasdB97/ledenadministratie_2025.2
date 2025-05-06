@@ -19,35 +19,46 @@ class FamilyMember
    * @param int $bookyear_id The ID of the book year to filter contributions by
    * @return array An array of family member objects with additional family data
    */
-  public function getMembersWithContributionsByBookyear($bookyear_id)
+  public function getMembersWithContributionsByBookyear($bookyear_id, $family_id = null)
   {
-    $this->db->query("
-        SELECT fm.*, 
-               f.name AS family_name,
-               f.street,
-               f.house_number,
-               f.postal_code,
-               f.city,
-               f.country,
-               mt.description AS member_type,
-               mt.discount_percentage,
-               (100 * (1 - mt.discount_percentage / 100)) AS outstanding_contribution,
-               (SELECT COUNT(*) FROM family_members fm2 WHERE fm2.family_id = fm.family_id) AS member_count,
-               (SELECT SUM(c2.amount) 
-                FROM contributions c2
-                INNER JOIN family_members fm3 ON c2.member_id = fm3.id
-                WHERE fm3.family_id = fm.family_id 
-                AND c2.bookyear_id = :bookyear_id) AS total_contribution
-        FROM family_members fm
-        INNER JOIN contributions c ON fm.id = c.member_id
-        INNER JOIN family f ON fm.family_id = f.id
-        INNER JOIN member_type mt ON fm.member_type_id = mt.id
-        WHERE c.bookyear_id = :bookyear_id
-    ");
+    $query = "
+            SELECT fm.*, 
+                   f.name AS family_name,
+                   f.street,
+                   f.house_number,
+                   f.postal_code,
+                   f.city,
+                   f.country,
+                   mt.description AS member_type,
+                   mt.discount_percentage,
+                   (100 * (1 - mt.discount_percentage / 100)) AS outstanding_contribution,
+                   (SELECT COUNT(*) FROM family_members fm2 WHERE fm2.family_id = fm.family_id) AS member_count,
+                   (SELECT SUM(c2.amount) 
+                    FROM contributions c2
+                    INNER JOIN family_members fm3 ON c2.member_id = fm3.id
+                    WHERE fm3.family_id = fm.family_id 
+                    AND c2.bookyear_id = :bookyear_id) AS total_contribution
+            FROM family_members fm
+            INNER JOIN contributions c ON fm.id = c.member_id
+            INNER JOIN family f ON fm.family_id = f.id
+            INNER JOIN member_type mt ON fm.member_type_id = mt.id
+            WHERE c.bookyear_id = :bookyear_id
+        ";
+
+    // Voeg family_id voorwaarde toe als deze is opgegeven
+    if ($family_id !== null) {
+      $query .= " AND fm.family_id = :family_id";
+    }
+
+    $this->db->query($query);
     $this->db->bind(':bookyear_id', $bookyear_id);
+    if ($family_id !== null) {
+      $this->db->bind(':family_id', $family_id);
+    }
+
     return $this->db->resultSet();
   }
-
+  
   public function addFamilyMemberWithContribution($data)
   {
     try {

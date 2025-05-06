@@ -19,7 +19,7 @@ class DashboardController extends Controller
   {
     $selectedYear = $_SESSION['selectedYear'];
     $bookyear = $this->bookyearModel->getBookyearByYear($selectedYear);
-    $familyMembers = $this->familyMemberModel->getMembersWithContributionsByBookyear($bookyear->id);
+    $familyMembers = $this->familyMemberModel->getMembersWithContributionsByBookyear($bookyear->id, null);
 
     // Maak een unieke lijst van families op basis van family_id
     $families = [];

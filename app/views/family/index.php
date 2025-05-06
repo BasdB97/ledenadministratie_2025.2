@@ -1,5 +1,11 @@
 <?php include_once APP_ROOT . '/views/includes/header.php'; ?>
-
+<?php
+// echo '<pre>';
+// var_dump($data);
+// echo '<br>';
+// var_dump($_SESSION);
+// echo '</pre>';
+?>
 <div class="px-6 py-8">
   <div class="flex justify-between items-center mb-6">
     <h2 class="text-2xl font-bold text-gray-800">Families</h2>

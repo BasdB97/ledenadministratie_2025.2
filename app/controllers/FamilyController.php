@@ -174,7 +174,7 @@ class FamilyController extends Controller
     $data = [
       'title' => 'Familie details',
       'family' => $this->familyModel->getFamilyById($id),
-      'members' => $this->familyMemberModel->getMembersWithContributionsByBookyear($bookyear->id)
+      'members' => $this->familyMemberModel->getMembersWithContributionsByBookyear($bookyear->id, $id)
     ];
 
     $data['family']->total_contribution = 0;
